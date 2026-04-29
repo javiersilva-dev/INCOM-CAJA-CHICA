@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INCOM — Caja Chica</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg: #F4F3EF;
+  --bg2: #ECEAE4;
+  --bg3: #E2DFD8;
+  --border: #D0CCC2;
+  --text: #1A1916;
+  --text2: #6B6760;
+  --text3: #9B9890;
+  --azul: #1B4FD8;
+  --azul-bg: #EBF0FD;
+  --azul-border: #B8CAFC;
+  --verde: #1A6B3A;
+  --verde-bg: #E8F5EE;
+  --verde-border: #9ECDB3;
+  --rojo: #C0392B;
+  --rojo-bg: #FDECEA;
+  --rojo-border: #F5B8B2;
+  --amber: #8B5A00;
+  --amber-bg: #FDF3E0;
+  --amber-border: #F5D48A;
+  --purple: #4A2E9E;
+  --purple-bg: #F0EBFD;
+  --purple-border: #C9B8F8;
+  --font: 'IBM Plex Sans', sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+  --radius: 6px;
+  --radius-lg: 10px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+}
+
+/* HEADER */
+.header {
+  background: var(--text);
+  color: #F4F3EF;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.header-brand { display: flex; align-items: center; gap: 12px; }
+.header-logo {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: .08em;
+  background: var(--azul);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+.header-title { font-size: 13px; color: #9B9890; font-weight: 400; }
+.header-sync { display: flex; align-items: center; gap: 6px; font-size: 11px; font-family: var(--mono); color: #9B9890; }
+.sync-dot { width: 7px; height: 7px; border-radius: 50%; }
+.sync-dot.ok { background: #3DBA6F; }
+.sync-dot.loading { background: #F5A623; animation: pulse 1s infinite; }
+.sync-dot.error { background: #E74C3C; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
+
+/* LAYOUT */
+.container { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+
+/* TABS */
+.tabs { display: flex; gap: 2px; margin-bottom: 24px; background: var(--bg2); padding: 4px; border-radius: var(--radius); border: 1px solid var(--border); flex-wrap: wrap; }
+.tab { padding: 7px 14px; font-size: 12px; font-weight: 500; font-family: var(--mono); border: none; background: none; cursor: pointer; color: var(--text2); border-radius: 4px; letter-spacing: .03em; transition: all .15s; white-space: nowrap; }
+.tab:hover { color: var(--text); background: var(--bg3); }
+.tab.active { background: var(--text); color: #F4F3EF; }
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* KPIs */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: 12px; margin-bottom: 20px; }
+.kpi { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; }
+.kpi-label { font-size: 10px; font-family: var(--mono); font-weight: 500; letter-spacing: .08em; color: var(--text3); text-transform: uppercase; margin-bottom: 6px; }
+.kpi-val { font-size: 22px; font-weight: 600; font-family: var(--mono); }
+.kpi-val.pos { color: var(--verde); }
+.kpi-val.neg { color: var(--rojo); }
+.kpi-val.neu { color: var(--azul); }
+.kpi-val.war { color: var(--amber); }
+.kpi-val.pend { color: var(--amber); }
+
+/* SECTION TITLE */
+.sec { font-size: 10px; font-family: var(--mono); font-weight: 500; letter-spacing: .1em; color: var(--text3); text-transform: uppercase; margin-bottom: 10px; margin-top: 20px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+
+/* TABLE */
+.tw { overflow-x: auto; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th { text-align: left; padding: 8px 12px; font-weight: 500; font-size: 10px; font-family: var(--mono); letter-spacing: .06em; color: var(--text3); border-bottom: 1px solid var(--border); white-space: nowrap; background: var(--bg2); }
+td { padding: 8px 12px; border-bottom: 1px solid var(--bg2); color: var(--text); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr.remesa-row td { background: #FFFBF0; }
+tr.arrastre-row td { background: #F8F5FF; }
+tr.traspaso-row td { background: #F0F6FF; }
+tr.pendiente-row td { background: #FFFBF0; }
+tr:hover td { background: var(--bg); }
+tr.remesa-row:hover td { background: #FFF7E0; }
+
+/* BADGES */
+.badge { font-size: 10px; padding: 2px 7px; border-radius: 3px; display: inline-block; font-weight: 500; font-family: var(--mono); letter-spacing: .03em; }
+.b-ing { background: var(--verde-bg); color: var(--verde); border: 1px solid var(--verde-border); }
+.b-eg  { background: var(--rojo-bg);  color: var(--rojo);  border: 1px solid var(--rojo-border); }
+.b-rem { background: var(--amber-bg); color: var(--amber);  border: 1px solid var(--amber-border); }
+.b-tras{ background: var(--azul-bg);  color: var(--azul);   border: 1px solid var(--azul-border); }
+.b-arr { background: var(--purple-bg);color: var(--purple);  border: 1px solid var(--purple-border); }
+.b-j   { background: var(--azul-bg);  color: var(--azul);   border: 1px solid var(--azul-border); }
+.b-a   { background: var(--amber-bg); color: var(--amber);  border: 1px solid var(--amber-border); }
+.pend-tag { font-size: 10px; padding: 2px 7px; border-radius: 3px; background: var(--amber-bg); color: var(--amber); font-weight: 500; font-family: var(--mono); border: 1px solid var(--amber-border); white-space: nowrap; }
+.pend-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #F5A623; margin-right: 4px; vertical-align: middle; }
+
+/* FORM */
+.form-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 20px; }
+.fg { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.ff { grid-column: 1/-1; }
+label { font-size: 11px; font-family: var(--mono); font-weight: 500; letter-spacing: .04em; color: var(--text2); display: block; margin-bottom: 5px; }
+input, select { width: 100%; font-size: 13px; font-family: var(--font); padding: 8px 11px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); transition: border-color .15s; }
+input:focus, select:focus { outline: none; border-color: var(--azul); background: #fff; }
+input:disabled { opacity: .4; cursor: not-allowed; }
+
+/* BUTTONS */
+.btn { padding: 8px 18px; border-radius: var(--radius); border: 1px solid var(--border); background: #fff; color: var(--text); cursor: pointer; font-size: 12px; font-family: var(--mono); font-weight: 500; letter-spacing: .04em; transition: all .15s; }
+.btn:hover { background: var(--bg2); }
+.btn-p { background: var(--text); color: #F4F3EF; border-color: var(--text); }
+.btn-p:hover { background: #2d2d2a; }
+.btn-warn { background: var(--amber); color: #fff; border-color: var(--amber); }
+.btn-warn:hover { background: #7A4E00; }
+.btn-amber { background: var(--amber); color: #fff; border-color: var(--amber); }
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ALERTS */
+.alerta { padding: 10px 14px; border-radius: var(--radius); font-size: 12.5px; margin-bottom: 16px; }
+.al-info   { background: var(--azul-bg);   color: #1A3A9E; border: 1px solid var(--azul-border); }
+.al-warn   { background: var(--amber-bg);  color: var(--amber); border: 1px solid var(--amber-border); }
+.al-purple { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-border); }
+.al-green  { background: var(--verde-bg);  color: var(--verde);  border: 1px solid var(--verde-border); }
+
+/* SYNC BAR */
+.sync-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; font-size: 11px; font-family: var(--mono); color: var(--text2); }
+
+/* SALDO EDIT */
+.saldo-edit-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding: 14px 16px; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); flex-wrap: wrap; }
+
+/* CIERRE */
+.cierre-bloque { border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px; }
+.cb-j   { background: var(--azul-bg);   border: 1px solid var(--azul-border); }
+.cb-a   { background: var(--amber-bg);  border: 1px solid var(--amber-border); }
+.cb-tot { background: var(--verde-bg);  border: 1px solid var(--verde-border); }
+.cb-arr { background: var(--purple-bg); border: 1px solid var(--purple-border); }
+.cr { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid rgba(0,0,0,.06); font-size: 13px; }
+.cr:last-child { border-bottom: none; }
+.cr.total { font-weight: 600; font-size: 15px; padding-top: 10px; margin-top: 4px; border-top: 1px solid rgba(0,0,0,.12); }
+.informe { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; }
+.informe-header { border-bottom: 1px solid var(--border); padding-bottom: 14px; margin-bottom: 16px; }
+.informe-title { font-size: 17px; font-weight: 600; margin-bottom: 3px; }
+.informe-sub { font-size: 12px; font-family: var(--mono); color: var(--text2); }
+.dos-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+@media(max-width:600px){ .dos-col{grid-template-columns:1fr} .fg{grid-template-columns:1fr} .ff{grid-column:1} }
+.concepto-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.concepto-bar-label { font-size: 12px; width: 150px; flex-shrink: 0; font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.concepto-bar-track { flex: 1; height: 8px; background: var(--bg2); border-radius: 4px; overflow: hidden; }
+.concepto-bar-fill { height: 8px; border-radius: 4px; transition: width .4s ease; }
+.concepto-bar-val { font-size: 12px; width: 95px; text-align: right; flex-shrink: 0; color: var(--text2); font-family: var(--mono); }
+.concepto-bar-pct { font-size: 11px; width: 36px; text-align: right; flex-shrink: 0; color: var(--text3); font-family: var(--mono); }
+
+/* MODAL */
+.modal-bg { display: none; position: fixed; top:0;left:0;right:0;bottom:0; background: rgba(26,25,22,.5); z-index: 200; align-items: center; justify-content: center; }
+.modal-box { background: #fff; border-radius: var(--radius-lg); padding: 24px; width: 320px; border: 1px solid var(--border); box-shadow: 0 20px 60px rgba(0,0,0,.15); }
+.modal-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.modal-desc { font-size: 12px; font-family: var(--mono); color: var(--text2); margin-bottom: 14px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-brand">
+    <div class="header-logo">INCOM</div>
+    <div class="header-title">Control de Caja Chica</div>
+  </div>
+  <div class="header-sync">
+    <div class="sync-dot loading" id="hdr-dot"></div>
+    <span id="hdr-txt">Conectando...</span>
+  </div>
+</div>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" onclick="goTab('resumen',this)">Resumen</button>
+    <button class="tab" onclick="goTab('javier',this)">Caja Javier</button>
+    <button class="tab" onclick="goTab('andrea',this)">Caja Andrea</button>
+    <button class="tab" onclick="goTab('nuevo',this)">+ Movimiento</button>
+    <button class="tab" onclick="goTab('pendientes',this)">Pendientes <span id="badge-pend"></span></button>
+    <button class="tab" onclick="goTab('traspaso',this)">Traspaso</button>
+    <button class="tab" onclick="goTab('cierre',this)">Cierre</button>
+  </div>
+
+  <!-- RESUMEN -->
+  <div id="p-resumen" class="panel active">
+    <div class="sync-bar">
+      <div class="sync-dot loading" id="sync-dot"></div>
+      <span id="sync-txt">Conectando con Google Sheets...</span>
+      <button class="btn btn-sm" onclick="cargarDesdeSheets()" style="margin-left:auto">↻ Actualizar</button>
+    </div>
+    <div class="kpis" id="kpi-resumen"></div>
+    <div id="alerta-pendientes"></div>
+    <div class="sec">Últimos movimientos</div>
+    <div class="tw"><table><thead><tr><th>Fecha</th><th>Caja</th><th>Descripción</th><th>Tipo</th><th style="text-align:right">Monto</th></tr></thead><tbody id="tb-resumen"></tbody></table></div>
+  </div>
+
+  <!-- CAJA JAVIER -->
+  <div id="p-javier" class="panel">
+    <div class="sec" style="margin-top:0">Saldo inicial (editable)</div>
+    <div class="saldo-edit-row">
+      <span style="font-size:12px;font-family:var(--mono);color:var(--text2)">Saldo mes anterior:</span>
+      <span style="font-family:var(--mono);color:var(--text2)">$</span>
+      <input type="number" id="saldo-inicial-input" value="1002387" style="width:160px;font-family:var(--mono);font-weight:500">
+      <button class="btn btn-p btn-sm" onclick="aplicarSaldoInicial()">Actualizar</button>
+      <span id="saldo-ok" style="display:none;font-size:11px;font-family:var(--mono);color:var(--verde)">✓ Guardado</span>
+    </div>
+    <div class="kpis" id="kpi-javier"></div>
+    <div class="sec">Movimientos</div>
+    <div class="tw"><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Recibe</th><th>Concepto</th><th>Tipo</th><th>Doc</th><th style="text-align:right">Ingreso</th><th style="text-align:right">Egreso</th><th style="text-align:right">Saldo</th></tr></thead><tbody id="tb-javier"></tbody></table></div>
+  </div>
+
+  <!-- CAJA ANDREA -->
+  <div id="p-andrea" class="panel">
+    <div class="kpis" id="kpi-andrea"></div>
+    <div class="alerta al-purple" style="font-size:12px;font-family:var(--mono)">Todo ingreso de Andrea proviene de Javier: remesa del mes o arrastre del mes anterior.</div>
+    <div class="sec">Movimientos</div>
+    <div class="tw"><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Recibe</th><th>Proveedor</th><th>Concepto</th><th>Tipo</th><th>Doc</th><th style="text-align:right">Ingreso</th><th style="text-align:right">Egreso</th><th style="text-align:right">Saldo</th></tr></thead><tbody id="tb-andrea"></tbody></table></div>
+  </div>
+
+  <!-- NUEVO -->
+  <div id="p-nuevo" class="panel">
+    <div class="alerta al-info">Cada movimiento se guarda automáticamente en Google Sheets. Si no tienes el número de documento, marca "Pendiente".</div>
+    <div class="form-card">
+      <div class="fg">
+        <div><label>Fecha</label><input type="date" id="f-fecha"></div>
+        <div><label>Tipo de movimiento</label>
+          <select id="f-tipo">
+            <option value="ingreso-j">Ingreso → Caja Javier (del dueño)</option>
+            <option value="egreso-j">Egreso → Caja Javier</option>
+            <option value="egreso-a">Egreso → Caja Andrea</option>
+            <option value="remesa">Remesa: Javier entrega a Andrea</option>
+          </select>
+        </div>
+        <div><label>Monto (CLP)</label><input type="number" id="f-monto" placeholder="0"></div>
+        <div><label>Recibe / Responsable</label><input type="text" id="f-recibe"></div>
+        <div class="ff"><label>Descripción</label><input type="text" id="f-desc"></div>
+        <div><label>Proveedor</label><input type="text" id="f-prov"></div>
+        <div><label>Concepto</label>
+          <select id="f-concepto">
+            <option>Gastos generales</option><option>Viáticos</option><option>Seguros</option>
+            <option>Peajes</option><option>Mantención</option><option>Limpieza</option>
+            <option>Gifcard / Cumpleaños</option><option>Otro</option>
+          </select>
+        </div>
+        <div><label>Tipo documento</label>
+          <select id="f-doc" onchange="onDocChange()">
+            <option value="">Sin documento</option><option value="Boleta">Boleta</option>
+            <option value="Factura">Factura</option><option value="Comprobante">Comprobante</option>
+          </select>
+        </div>
+        <div><label>N° documento</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="f-ndoc" placeholder="Número">
+            <label style="display:flex;align-items:center;gap:5px;white-space:nowrap;font-size:11px;cursor:pointer;margin-bottom:0">
+              <input type="checkbox" id="f-pendiente" onchange="onPendienteChange()" style="width:auto"> Pendiente
+            </label>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-p" id="btn-reg" onclick="registrar()">Registrar y guardar en Sheets</button>
+      <span id="ok" style="display:none;margin-left:12px;font-size:11px;font-family:var(--mono);color:var(--verde)">✓ Guardado en Sheets</span>
+      <span id="ok-err" style="display:none;margin-left:12px;font-size:11px;font-family:var(--mono);color:var(--rojo)">⚠ Error al guardar</span>
+    </div>
+  </div>
+
+  <!-- PENDIENTES -->
+  <div id="p-pendientes" class="panel">
+    <div class="alerta al-warn">Movimientos con número de documento pendiente. Al completar se actualiza en Sheets automáticamente.</div>
+    <div id="lista-pendientes"></div>
+  </div>
+
+  <!-- TRASPASO -->
+  <div id="p-traspaso" class="panel">
+    <div class="alerta al-warn">Traspaso de custodia cuando alguien sale de vacaciones. La caja de quien se va queda en $0.</div>
+    <div class="form-card">
+      <div class="fg">
+        <div><label>Fecha</label><input type="date" id="t-fecha"></div>
+        <div><label>¿Quién se ausenta?</label>
+          <select id="t-quien" onchange="renderTraspasoPreview()">
+            <option value="andrea-a-javier">Andrea entrega su saldo a Javier</option>
+            <option value="javier-a-andrea">Javier entrega su saldo a Andrea</option>
+          </select>
+        </div>
+        <div class="ff"><label>Motivo</label><input type="text" id="t-motivo" placeholder="Ej: Vacaciones anuales"></div>
+      </div>
+      <div id="t-preview" style="margin-bottom:14px;font-size:12px;font-family:var(--mono);color:var(--text2)"></div>
+      <button class="btn btn-warn" onclick="ejecutarTraspaso()">Ejecutar traspaso</button>
+      <span id="t-ok" style="display:none;margin-left:12px;font-size:11px;font-family:var(--mono);color:var(--verde)">✓ Registrado en Sheets</span>
+    </div>
+  </div>
+
+  <!-- CIERRE -->
+  <div id="p-cierre" class="panel">
+    <div id="cierre-body"></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modal-wrap">
+  <div class="modal-box">
+    <div class="modal-title">Completar documento</div>
+    <div class="modal-desc" id="modal-desc"></div>
+    <label>Número de documento</label>
+    <input type="text" id="modal-ndoc" placeholder="Ingresa el número" style="margin-bottom:14px">
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-sm" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-p btn-sm" onclick="guardarNdoc()">Guardar en Sheets</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxt8yufRy0-dSmxUclCX0PYUM30p_ePCVEQVcnMiSX4X3vbfRQsAggfASPUvUOaT1fRQA/exec';
+const fmt=n=>'$'+Math.round(n).toLocaleString('es-CL');
+const EXCLUIR=['Remesa','Traspaso custodia','Arrastre mes anterior','Saldo anterior'];
+const COLORES={'Seguros':'#1B4FD8','Gastos generales':'#1A6B3A','Viáticos':'#8B5A00','Limpieza':'#1D9E75','Peajes':'#4A2E9E','Mantención':'#C0392B','Gifcard / Cumpleaños':'#D4537E','Otro':'#6B6760'};
+
+let MJ=[],MA=[],nextId=Date.now(),modalId=null,modalCaja=null,pieChart=null;
+
+const saldoActual=m=>m.reduce((s,x)=>x.tipo==='ingreso'?s+x.monto:s-x.monto,0);
+function conSaldos(movs){let s=0;return movs.map(m=>{s+=m.tipo==='ingreso'?m.monto:-m.monto;return{...m,saldo:s};});}
+
+function setSyncStatus(e,t){
+  ['sync-dot','hdr-dot'].forEach(id=>{document.getElementById(id).className='sync-dot '+e;});
+  document.getElementById('sync-txt').textContent=t;
+  document.getElementById('hdr-txt').textContent=t;
+}
+
+async function sheetsPost(p){
+  const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(p),headers:{'Content-Type':'text/plain'}});
+  return r.json();
+}
+
+async function cargarDesdeSheets(){
+  setSyncStatus('loading','Cargando desde Google Sheets...');
+  try{
+    const r=await sheetsPost({action:'leerTodo'});
+    if(r.ok){
+      MJ=Array.isArray(r.movJavier)?r.movJavier:[];
+      MA=Array.isArray(r.movAndrea)?r.movAndrea:[];
+      if(r.saldoInicial){
+        document.getElementById('saldo-inicial-input').value=r.saldoInicial;
+        const ini=MJ.find(m=>m.concepto==='Saldo anterior');
+        if(ini)ini.monto=Number(r.saldoInicial);
+      }
+      setSyncStatus('ok','Sincronizado · '+new Date().toLocaleTimeString('es-CL'));
+      refreshAll();
+    }else{setSyncStatus('error','Error: '+(r.error||'desconocido'));}
+  }catch(e){setSyncStatus('error','Sin conexión a Sheets');}
+}
+
+function tipoBadge(m){
+  if(m.concepto==='Arrastre mes anterior')return`<span class="badge b-arr">Arrastre</span>`;
+  if(m.concepto==='Remesa')return`<span class="badge b-rem">Remesa</span>`;
+  if(m.concepto==='Traspaso custodia')return`<span class="badge b-tras">Traspaso</span>`;
+  if(m.tipo==='ingreso')return`<span class="badge b-ing">Ingreso</span>`;
+  return`<span class="badge b-eg">Egreso</span>`;
+}
+function rowClass(m){
+  if(m.pendiente)return'pendiente-row';
+  if(m.concepto==='Arrastre mes anterior')return'arrastre-row';
+  if(m.concepto==='Remesa')return'remesa-row';
+  if(m.concepto==='Traspaso custodia')return'traspaso-row';
+  return'';
+}
+function docStr(m){
+  if(m.pendiente)return`<span class="pend-tag"><span class="pend-dot"></span>N° pendiente</span>`;
+  if(!m.doc)return'';
+  return`${m.doc}${m.ndoc?' #'+m.ndoc:''}`;
+}
+
+function renderKPI(id,movs){
+  const cs=conSaldos(movs);const s=cs.length?cs[cs.length-1].saldo:0;
+  const ing=movs.filter(m=>m.tipo==='ingreso').reduce((a,m)=>a+m.monto,0);
+  const eg=movs.filter(m=>m.tipo==='egreso'&&!EXCLUIR.includes(m.concepto)).reduce((a,m)=>a+m.monto,0);
+  const pend=[...MJ,...MA].filter(m=>m.pendiente).length;
+  document.getElementById(id).innerHTML=`
+    <div class="kpi"><div class="kpi-label">Saldo actual</div><div class="kpi-val neu">${fmt(s)}</div></div>
+    <div class="kpi"><div class="kpi-label">Total ingresos</div><div class="kpi-val pos">${fmt(ing)}</div></div>
+    <div class="kpi"><div class="kpi-label">Egresos operac.</div><div class="kpi-val neg">${fmt(eg)}</div></div>
+    <div class="kpi"><div class="kpi-label">Doc. pendientes</div><div class="kpi-val ${pend>0?'pend':'pos'}">${pend>0?pend:'—'}</div></div>
+  `;
+}
+
+function renderTabla(id,movs,cols){
+  const rows=conSaldos(movs);let h='';
+  rows.forEach(m=>{
+    const iS=m.tipo==='ingreso'?`<span style="color:var(--verde);font-family:var(--mono)">${fmt(m.monto)}</span>`:'';
+    const eS=m.tipo==='egreso'?`<span style="color:var(--rojo);font-family:var(--mono)">${fmt(m.monto)}</span>`:'';
+    if(cols==='j'){
+      h+=`<tr class="${rowClass(m)}"><td style="white-space:nowrap;font-family:var(--mono);font-size:11px">${m.fecha}</td><td>${m.desc}</td><td>${m.recibe}</td><td><span style="font-size:10px;font-family:var(--mono);color:var(--text2)">${m.concepto}</span></td><td>${tipoBadge(m)}</td><td>${docStr(m)}</td><td style="text-align:right">${iS}</td><td style="text-align:right">${eS}</td><td style="text-align:right;font-family:var(--mono);font-weight:500;font-size:12px">${fmt(m.saldo)}</td></tr>`;
+    }else{
+      h+=`<tr class="${rowClass(m)}"><td style="white-space:nowrap;font-family:var(--mono);font-size:11px">${m.fecha}</td><td>${m.desc}</td><td>${m.recibe}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px">${m.prov||''}</td><td><span style="font-size:10px;font-family:var(--mono);color:var(--text2)">${m.concepto}</span></td><td>${tipoBadge(m)}</td><td>${docStr(m)}</td><td style="text-align:right">${iS}</td><td style="text-align:right">${eS}</td><td style="text-align:right;font-family:var(--mono);font-weight:500;font-size:12px">${fmt(m.saldo)}</td></tr>`;
+    }
+  });
+  document.getElementById(id).innerHTML=h||`<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--text3);font-family:var(--mono);font-size:12px">Sin movimientos</td></tr>`;
+}
+
+function renderPendientes(){
+  const todos=[...MJ.filter(m=>m.pendiente).map(m=>({...m,caja:'Javier'})),...MA.filter(m=>m.pendiente).map(m=>({...m,caja:'Andrea'}))];
+  const badge=document.getElementById('badge-pend');
+  badge.innerHTML=todos.length?`<span style="background:var(--amber);color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px;font-family:var(--mono)">${todos.length}</span>`:'';
+  if(!todos.length){document.getElementById('lista-pendientes').innerHTML=`<div style="text-align:center;padding:2rem;color:var(--text3);font-family:var(--mono);font-size:12px">Sin documentos pendientes</div>`;return;}
+  let h='<div class="tw"><table><thead><tr><th>Fecha</th><th>Caja</th><th>Descripción</th><th>Proveedor</th><th>Concepto</th><th>Tipo doc</th><th style="text-align:right">Monto</th><th></th></tr></thead><tbody>';
+  todos.forEach(m=>{
+    h+=`<tr class="pendiente-row"><td style="white-space:nowrap;font-family:var(--mono);font-size:11px">${m.fecha}</td><td><span class="badge ${m.caja==='Javier'?'b-j':'b-a'}">${m.caja}</span></td><td>${m.desc}</td><td>${m.prov||'—'}</td><td><span style="font-size:10px;font-family:var(--mono);color:var(--text2)">${m.concepto}</span></td><td>${m.doc||'—'}</td><td style="text-align:right;color:var(--rojo);font-family:var(--mono);font-weight:500">${fmt(m.monto)}</td><td><button class="btn btn-amber btn-sm" onclick="abrirModal(${m.id},'${m.caja.toLowerCase()}')">Completar</button></td></tr>`;
+  });
+  h+='</tbody></table></div>';
+  document.getElementById('lista-pendientes').innerHTML=h;
+}
+
+function abrirModal(id,caja){
+  const arr=caja==='javier'?MJ:MA;
+  const m=arr.find(x=>x.id==id);if(!m)return;
+  modalId=id;modalCaja=caja;
+  document.getElementById('modal-desc').textContent=`${m.desc} — ${fmt(m.monto)} — ${m.doc}`;
+  document.getElementById('modal-ndoc').value='';
+  document.getElementById('modal-wrap').style.display='flex';
+}
+function cerrarModal(){document.getElementById('modal-wrap').style.display='none';modalId=null;modalCaja=null;}
+async function guardarNdoc(){
+  const ndoc=document.getElementById('modal-ndoc').value.trim();
+  if(!ndoc){alert('Ingresa el número');return;}
+  const arr=modalCaja==='javier'?MJ:MA;
+  const m=arr.find(x=>x.id==modalId);if(!m){cerrarModal();return;}
+  m.ndoc=ndoc;m.pendiente=false;
+  const mid=modalId,mc=modalCaja;cerrarModal();refreshAll();
+  try{await sheetsPost({action:'completarDocumento',id:mid,caja:mc,ndoc});setSyncStatus('ok','Documento completado · '+new Date().toLocaleTimeString('es-CL'));}catch(e){}
+}
+
+async function aplicarSaldoInicial(){
+  const v=parseFloat(document.getElementById('saldo-inicial-input').value);
+  if(!v||v<=0){alert('Ingresa un monto válido');return;}
+  const ini=MJ.find(m=>m.concepto==='Saldo anterior');
+  if(ini)ini.monto=v;else MJ.unshift({id:Date.now(),fecha:'01/01/2026',desc:'Saldo inicial',recibe:'Javier Silva',tipo:'ingreso',monto:v,prov:'',concepto:'Saldo anterior',doc:'',ndoc:'',pendiente:false});
+  refreshAll();
+  try{await sheetsPost({action:'actualizarSaldoInicial',monto:v});document.getElementById('saldo-ok').style.display='inline';setTimeout(()=>document.getElementById('saldo-ok').style.display='none',2500);}catch(e){}
+}
+
+function onDocChange(){
+  const v=document.getElementById('f-doc').value;
+  document.getElementById('f-ndoc').disabled=!v;document.getElementById('f-pendiente').disabled=!v;
+  if(!v){document.getElementById('f-pendiente').checked=false;document.getElementById('f-ndoc').value='';}
+}
+function onPendienteChange(){
+  const p=document.getElementById('f-pendiente').checked;
+  document.getElementById('f-ndoc').disabled=p;if(p)document.getElementById('f-ndoc').value='';
+}
+
+async function registrar(){
+  const tipo=document.getElementById('f-tipo').value;
+  const monto=parseFloat(document.getElementById('f-monto').value);
+  if(!monto||monto<=0){alert('Ingresa un monto válido');return;}
+  const fecha=document.getElementById('f-fecha').value.split('-').reverse().join('/');
+  const pendiente=document.getElementById('f-pendiente').checked;
+  const id1=nextId++,id2=nextId++;
+  const base={fecha,desc:document.getElementById('f-desc').value||'Sin descripción',recibe:document.getElementById('f-recibe').value,monto,prov:document.getElementById('f-prov').value,concepto:document.getElementById('f-concepto').value,doc:document.getElementById('f-doc').value,ndoc:pendiente?'':document.getElementById('f-ndoc').value,pendiente};
+  const btn=document.getElementById('btn-reg');btn.disabled=true;btn.textContent='Guardando...';
+  document.getElementById('ok').style.display='none';document.getElementById('ok-err').style.display='none';
+  try{
+    if(tipo==='ingreso-j'){const m={...base,id:id1,tipo:'ingreso'};MJ.push(m);await sheetsPost({action:'guardarMovimiento',caja:'javier',...m});}
+    else if(tipo==='egreso-j'){const m={...base,id:id1,tipo:'egreso'};MJ.push(m);await sheetsPost({action:'guardarMovimiento',caja:'javier',...m});}
+    else if(tipo==='egreso-a'){const m={...base,id:id1,tipo:'egreso'};MA.push(m);await sheetsPost({action:'guardarMovimiento',caja:'andrea',...m});}
+    else{
+      const mJ={...base,id:id1,tipo:'egreso',desc:'Remesa a Andrea',concepto:'Remesa',pendiente:false};
+      const mA={...base,id:id2,tipo:'ingreso',desc:'Remesa recibida de Javier',concepto:'Remesa',pendiente:false};
+      MJ.push(mJ);MA.push(mA);await sheetsPost({action:'guardarEnAmbas',movJavier:mJ,movAndrea:mA});
+    }
+    refreshAll();document.getElementById('ok').style.display='inline';
+    setTimeout(()=>document.getElementById('ok').style.display='none',2500);
+    setSyncStatus('ok','Guardado · '+new Date().toLocaleTimeString('es-CL'));
+    ['f-monto','f-desc','f-ndoc'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('f-pendiente').checked=false;document.getElementById('f-ndoc').disabled=false;
+  }catch(e){document.getElementById('ok-err').style.display='inline';setSyncStatus('error','Error al guardar');}
+  btn.disabled=false;btn.textContent='Registrar y guardar en Sheets';
+}
+
+function renderTraspasoPreview(){
+  const sJ=saldoActual(MJ),sA=saldoActual(MA);
+  const q=document.getElementById('t-quien').value;
+  document.getElementById('t-preview').textContent=q==='andrea-a-javier'?`Andrea entregará ${fmt(sA)} a Javier. Su caja quedará en $0.`:`Javier entregará ${fmt(sJ)} a Andrea. Su caja quedará en $0.`;
+}
+async function ejecutarTraspaso(){
+  const fecha=document.getElementById('t-fecha').value.split('-').reverse().join('/');
+  const q=document.getElementById('t-quien').value;
+  const motivo=document.getElementById('t-motivo').value||'Vacaciones';
+  const sJ=saldoActual(MJ),sA=saldoActual(MA);
+  const id1=nextId++,id2=nextId++;let mJ,mA;
+  if(q==='andrea-a-javier'){
+    if(sA<=0){alert('La subcaja Andrea no tiene saldo');return;}
+    mA={id:id1,fecha,desc:`Traspaso custodia a Javier — ${motivo}`,recibe:'Javier Silva',tipo:'egreso',monto:sA,prov:'',concepto:'Traspaso custodia',doc:'Comprobante',ndoc:'',pendiente:false};
+    mJ={id:id2,fecha,desc:`Traspaso custodia desde Andrea — ${motivo}`,recibe:'Javier Silva',tipo:'ingreso',monto:sA,prov:'',concepto:'Traspaso custodia',doc:'Comprobante',ndoc:'',pendiente:false};
+  }else{
+    if(sJ<=0){alert('La caja Javier no tiene saldo');return;}
+    mJ={id:id1,fecha,desc:`Traspaso custodia a Andrea — ${motivo}`,recibe:'Andrea Jofre',tipo:'egreso',monto:sJ,prov:'',concepto:'Traspaso custodia',doc:'Comprobante',ndoc:'',pendiente:false};
+    mA={id:id2,fecha,desc:`Traspaso custodia desde Javier — ${motivo}`,recibe:'Andrea Jofre',tipo:'ingreso',monto:sJ,prov:'',concepto:'Traspaso custodia',doc:'Comprobante',ndoc:'',pendiente:false};
+  }
+  MA.push(mA);MJ.push(mJ);refreshAll();
+  try{await sheetsPost({action:'guardarEnAmbas',movJavier:mJ,movAndrea:mA});setSyncStatus('ok','Traspaso guardado · '+new Date().toLocaleTimeString('es-CL'));}catch(e){}
+  document.getElementById('t-ok').style.display='inline';setTimeout(()=>document.getElementById('t-ok').style.display='none',2500);renderTraspasoPreview();
+}
+
+function renderResumen(){
+  const sJ=saldoActual(MJ),sA=saldoActual(MA);
+  const egJ=MJ.filter(m=>m.tipo==='egreso'&&!EXCLUIR.includes(m.concepto)).reduce((a,m)=>a+m.monto,0);
+  const egA=MA.filter(m=>m.tipo==='egreso'&&!EXCLUIR.includes(m.concepto)).reduce((a,m)=>a+m.monto,0);
+  const pend=[...MJ,...MA].filter(m=>m.pendiente).length;
+  document.getElementById('kpi-resumen').innerHTML=`
+    <div class="kpi"><div class="kpi-label">Saldo Javier</div><div class="kpi-val neu">${fmt(sJ)}</div></div>
+    <div class="kpi"><div class="kpi-label">Saldo Andrea</div><div class="kpi-val war">${fmt(sA)}</div></div>
+    <div class="kpi"><div class="kpi-label">Saldo consolidado</div><div class="kpi-val pos">${fmt(sJ+sA)}</div></div>
+    <div class="kpi"><div class="kpi-label">Doc. pendientes</div><div class="kpi-val ${pend>0?'pend':'pos'}">${pend>0?pend:'—'}</div></div>
+  `;
+  document.getElementById('alerta-pendientes').innerHTML=pend>0?`<div class="alerta al-warn"><span class="pend-dot"></span> <strong>${pend}</strong> documento${pend>1?'s':''} pendiente${pend>1?'s':''}. Ve a la pestaña <strong>Pendientes</strong>.</div>`:'';
+  const todos=[...MJ.map(m=>({...m,caja:'J'})),...MA.map(m=>({...m,caja:'A'}))]
+    .sort((a,b)=>{const pa=a.fecha.split('/'),pb=b.fecha.split('/');return new Date(+pb[2],+pb[1]-1,+pb[0])-new Date(+pa[2],+pa[1]-1,+pa[0]);}).slice(0,20);
+  let h='';
+  todos.forEach(m=>{
+    const cb=m.caja==='J'?`<span class="badge b-j">Javier</span>`:`<span class="badge b-a">Andrea</span>`;
+    const ps=m.pendiente?` <span class="pend-tag" style="font-size:9px">doc pendiente</span>`:'';
+    h+=`<tr class="${rowClass(m)}"><td style="white-space:nowrap;font-family:var(--mono);font-size:11px">${m.fecha}</td><td>${cb}</td><td>${m.desc}${ps}</td><td>${tipoBadge(m)}</td><td style="text-align:right;font-family:var(--mono);font-weight:500;color:${m.tipo==='ingreso'?'var(--verde)':'var(--rojo)'}">${fmt(m.monto)}</td></tr>`;
+  });
+  document.getElementById('tb-resumen').innerHTML=h;
+}
+
+function renderCierre(){
+  const sJ=saldoActual(MJ),sA=saldoActual(MA);
+  const pend=[...MJ,...MA].filter(m=>m.pendiente);
+  const fondos=MJ.filter(m=>m.tipo==='ingreso'&&!['Traspaso custodia','Arrastre mes anterior'].includes(m.concepto)).reduce((a,m)=>a+m.monto,0);
+  const arrastre=MJ.filter(m=>m.concepto==='Arrastre mes anterior'&&m.tipo==='egreso').reduce((a,m)=>a+m.monto,0);
+  const remesas=MJ.filter(m=>m.tipo==='egreso'&&m.concepto==='Remesa').reduce((a,m)=>a+m.monto,0);
+  const egJD=MJ.filter(m=>m.tipo==='egreso'&&!EXCLUIR.includes(m.concepto)).reduce((a,m)=>a+m.monto,0);
+  const egAD=MA.filter(m=>m.tipo==='egreso'&&!EXCLUIR.includes(m.concepto)).reduce((a,m)=>a+m.monto,0);
+  const tot=egJD+egAD;
+  const conc=Object.entries([...MJ,...MA].filter(m=>m.tipo==='egreso'&&!EXCLUIR.includes(m.concepto)).reduce((a,m)=>{a[m.concepto]=(a[m.concepto]||0)+m.monto;return a;},{})).sort((a,b)=>b[1]-a[1]);
+  const maxV=conc.length?conc[0][1]:1;
+  const barras=conc.map(([k,v])=>`<div class="concepto-bar"><div class="concepto-bar-label">${k}</div><div class="concepto-bar-track"><div class="concepto-bar-fill" style="width:${Math.round(v/maxV*100)}%;background:${COLORES[k]||'#6B6760'}"></div></div><div class="concepto-bar-val">${fmt(v)}</div><div class="concepto-bar-pct">${Math.round(v/tot*100)}%</div></div>`).join('');
+  const ley=conc.map(([k,v])=>`<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;font-size:12px"><span style="width:10px;height:10px;border-radius:2px;background:${COLORES[k]||'#6B6760'};flex-shrink:0;display:inline-block"></span><span style="font-family:var(--mono)">${k}</span><span style="margin-left:auto;color:var(--text2);font-family:var(--mono)">${Math.round(v/tot*100)}%</span></div>`).join('');
+  const pa=sA;
+  const pendAlert=pend.length?`<div class="alerta al-warn">Hay <strong>${pend.length}</strong> documento${pend.length>1?'s':''} pendiente${pend.length>1?'s':''}. Completa antes de entregar a la contadora.</div>`:'';
+  document.getElementById('cierre-body').innerHTML=`
+    ${pendAlert}
+    <div class="informe">
+      <div class="informe-header">
+        <div class="informe-title">Informe de Caja Chica</div>
+        <div class="informe-sub">INCOM Industria y Comercio Ltda. &nbsp;·&nbsp; Responsable: Javier Silva &nbsp;·&nbsp; Subcaja: Andrea Jofre</div>
+      </div>
+      <div class="dos-col" style="margin-bottom:20px">
+        <div>
+          <div class="sec" style="margin-top:0">Flujo consolidado</div>
+          <div class="cierre-bloque cb-j" style="margin-bottom:10px">
+            <div style="font-size:10px;font-family:var(--mono);font-weight:500;color:var(--azul);margin-bottom:10px;text-transform:uppercase;letter-spacing:.08em">Caja madre — Javier</div>
+            <div class="cr"><span>Fondos del dueño</span><span style="font-family:var(--mono);color:var(--verde)">${fmt(fondos)}</span></div>
+            <div class="cr"><span>Arrastre mes anterior → Andrea</span><span style="font-family:var(--mono);color:var(--purple)">${fmt(arrastre)}</span></div>
+            <div class="cr"><span>Remesas a Andrea</span><span style="font-family:var(--mono);color:var(--amber)">${fmt(remesas)}</span></div>
+            <div class="cr"><span>Egresos directos</span><span style="font-family:var(--mono);color:var(--rojo)">${fmt(egJD)}</span></div>
+            <div class="cr total"><span style="color:var(--azul)">Saldo Javier</span><span style="font-family:var(--mono);color:var(--azul)">${fmt(sJ)}</span></div>
+          </div>
+          <div class="cierre-bloque cb-a" style="margin-bottom:10px">
+            <div style="font-size:10px;font-family:var(--mono);font-weight:500;color:var(--amber);margin-bottom:10px;text-transform:uppercase;letter-spacing:.08em">Subcaja — Andrea</div>
+            <div class="cr"><span>Arrastre + remesas recibidas</span><span style="font-family:var(--mono);color:var(--verde)">${fmt(arrastre+remesas)}</span></div>
+            <div class="cr"><span>Egresos directos</span><span style="font-family:var(--mono);color:var(--rojo)">${fmt(egAD)}</span></div>
+            <div class="cr total"><span style="color:var(--amber)">Saldo Andrea</span><span style="font-family:var(--mono);color:var(--amber)">${fmt(sA)}</span></div>
+          </div>
+          <div class="cierre-bloque cb-tot">
+            <div class="cr"><span style="font-weight:600">Total egresos operacionales</span><span style="font-family:var(--mono);color:var(--rojo);font-weight:600">${fmt(tot)}</span></div>
+            <div class="cr total" style="border-top:1px solid var(--verde-border)"><span style="color:var(--verde)">Saldo consolidado</span><span style="font-family:var(--mono);color:var(--verde);font-size:18px">${fmt(sJ+sA)}</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="sec" style="margin-top:0">Distribución de gastos</div>
+          <div style="position:relative;width:100%;height:190px"><canvas id="pie-chart"></canvas></div>
+          <div style="margin-top:12px">${ley}</div>
+        </div>
+      </div>
+      <div class="sec">Detalle por concepto</div>
+      ${barras}
+      <div style="display:flex;justify-content:flex-end;margin-top:8px;font-size:11px;font-family:var(--mono);color:var(--text2)">Total operacional: <strong style="margin-left:6px;color:var(--text)">${fmt(tot)}</strong></div>
+      ${pa>0?`<div class="cierre-bloque cb-arr" style="margin-top:16px"><div style="font-size:10px;font-family:var(--mono);font-weight:500;color:var(--purple);margin-bottom:8px;text-transform:uppercase;letter-spacing:.08em">Arrastre mes siguiente</div><div class="cr"><span>Saldo en poder de Andrea al cierre</span><span style="font-family:var(--mono);color:var(--purple);font-weight:600">${fmt(pa)}</span></div></div>`:''}
+    </div>
+  `;
+  if(pieChart){pieChart.destroy();pieChart=null;}
+  const canvas=document.getElementById('pie-chart');
+  if(canvas&&conc.length){
+    pieChart=new Chart(canvas,{type:'doughnut',data:{labels:conc.map(([k])=>k),datasets:[{data:conc.map(([,v])=>v),backgroundColor:conc.map(([k])=>COLORES[k]||'#6B6760'),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${fmt(ctx.raw)} (${Math.round(ctx.raw/tot*100)}%)`}}},cutout:'65%'}});
+  }
+}
+
+function refreshAll(){
+  renderResumen();
+  renderKPI('kpi-javier',MJ);renderTabla('tb-javier',MJ,'j');
+  renderKPI('kpi-andrea',MA);renderTabla('tb-andrea',MA,'a');
+  renderPendientes();
+}
+function goTab(id,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');document.getElementById('p-'+id).classList.add('active');
+  if(id==='cierre')renderCierre();
+  if(id==='pendientes')renderPendientes();
+  if(id==='traspaso'){renderTraspasoPreview();document.getElementById('t-quien').onchange=renderTraspasoPreview;}
+}
+document.getElementById('f-fecha').valueAsDate=new Date();
+document.getElementById('t-fecha').valueAsDate=new Date();
+cargarDesdeSheets();
+</script>
+</body>
+</html>
